@@ -1,0 +1,40 @@
+{{define "components/file_selection.html"}}
+<div class="file-selection">
+    {{if .download}}
+    <div class="torrent-info">
+        <span class="torrent-name">{{.download.Name}}</span>
+    </div>
+    {{end}}
+
+    <div class="file-select-controls">
+        <label class="checkbox-label">
+            <input type="checkbox" id="select-all-files" onchange="toggleAllFiles(this)">
+            <span class="checkbox-custom"></span>
+            <span>Select All</span>
+        </label>
+    </div>
+
+    <form id="file-selection-form" onsubmit="submitFileSelection(event, {{.downloadID}})">
+        <ul class="file-list">
+            {{range .files}}
+            <li class="file-item">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="files" value="{{.ID}}" class="file-checkbox">
+                    <span class="checkbox-custom"></span>
+                    <span class="file-path">{{.Path}}</span>
+                    <span class="file-size">{{formatBytes .Bytes}}</span>
+                </label>
+            </li>
+            {{end}}
+        </ul>
+
+        <div class="file-select-footer">
+            <span class="selected-count">0 files selected</span>
+            <button type="submit" class="btn-submit">
+                <span class="btn-text">DOWNLOAD SELECTED</span>
+                <span class="btn-loading">PROCESSING...</span>
+            </button>
+        </div>
+    </form>
+</div>
+{{end}}
