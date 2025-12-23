@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RD Downloader - Real-Debrid Movie Downloader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/sse.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-section">
+                <div class="logo-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <h1 class="logo-text">RD DOWNLOADER</h1>
+            </div>
+            <div class="header-info">
+                <span class="path-label">Library Path</span>
+                <span class="path-value">{{.moviesPath}}</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="panel movies-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span class="title-accent">//</span> COLLECTION
+                    </h2>
+                    <span class="panel-count">{{len .movies}} titles</span>
+                </div>
+                <div class="panel-body" id="movies-list">
+                    {{template "components/movie_list.html" .}}
+                </div>
+            </section>
+
+            <section class="panel downloads-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span class="title-accent">//</span> DOWNLOADS
+                    </h2>
+                    <button class="btn-add" onclick="openAddModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        ADD NEW
+                    </button>
+                </div>
+                <div class="panel-body" id="downloads-list" hx-ext="sse" sse-connect="/api/downloads/stream">
+                    {{template "components/download_table.html" .}}
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Modal -->
+    <div class="modal-overlay" id="add-modal" onclick="closeAddModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>ADD TO QUEUE</h3>
+                <button class="modal-close" onclick="closeAddModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="magnet" onclick="switchTab('magnet')">MAGNET LINK</button>
+                <button class="tab-btn" data-tab="file" onclick="switchTab('file')">TORRENT FILE</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-content active" id="tab-magnet">
+                    <form id="magnet-form" onsubmit="submitMagnet(event)">
+                        <div class="form-group">
+                            <label for="magnet-input">Paste magnet link</label>
+                            <textarea id="magnet-input" name="magnet" placeholder="magnet:?xt=urn:btih:..." rows="4" required></textarea>
+                        </div>
+                        <div class="form-group form-group-inline">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="magnet-subs" name="download_subs" checked>
+                                <span class="toggle-switch"></span>
+                                <span>Download English subtitles</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-submit">
+                            <span class="btn-text">START DOWNLOAD</span>
+                            <span class="btn-loading">PROCESSING...</span>
+                        </button>
+                    </form>
+                </div>
+                <div class="tab-content" id="tab-file">
+                    <form id="file-form" onsubmit="submitTorrentFile(event)">
+                        <div class="form-group">
+                            <label for="torrent-file">Select .torrent file</label>
+                            <div class="file-drop" id="file-drop">
+                                <input type="file" id="torrent-file" name="torrent" accept=".torrent" required>
+                                <div class="file-drop-content">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                    <span class="file-drop-text">Drop file here or click to browse</span>
+                                    <span class="file-name" id="selected-file-name"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group form-group-inline">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="file-subs" name="download_subs" checked>
+                                <span class="toggle-switch"></span>
+                                <span>Download English subtitles</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-submit">
+                            <span class="btn-text">START DOWNLOAD</span>
+                            <span class="btn-loading">PROCESSING...</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Selection Modal -->
+    <div class="modal-overlay" id="file-select-modal" onclick="closeFileSelectModal(event)">
+        <div class="modal modal-large" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>SELECT FILES TO DOWNLOAD</h3>
+                <button class="modal-close" onclick="closeFileSelectModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="file-select-content">
+                <!-- Content loaded via htmx -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

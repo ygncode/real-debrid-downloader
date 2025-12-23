@@ -1,0 +1,51 @@
+{{define "components/movie_list.html"}}
+{{if .error}}
+<div class="error-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <p>{{.error}}</p>
+</div>
+{{else if not .movies}}
+<div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <path d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+    </svg>
+    <p>No files in collection</p>
+    <span class="empty-hint">Add a torrent to get started</span>
+</div>
+{{else}}
+<ul class="movie-list">
+    {{range .movies}}
+    <li class="movie-item {{if .IsFolder}}is-folder{{else if eq .FileType "subtitle"}}is-subtitle{{end}}" data-path="{{.Path}}">
+        <div class="movie-icon">
+            {{if .IsFolder}}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            {{else if eq .FileType "subtitle"}}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M7 8h10M7 12h4m-4 4h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+            </svg>
+            {{else}}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            {{end}}
+        </div>
+        <div class="movie-info">
+            <span class="movie-name">{{.Name}}</span>
+            <span class="movie-size">{{formatBytes .Size}}</span>
+        </div>
+        <div class="movie-actions">
+            <button class="btn-delete-movie" onclick="deleteFile('{{.Path}}')" title="Delete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+    </li>
+    {{end}}
+</ul>
+{{end}}
+{{end}}

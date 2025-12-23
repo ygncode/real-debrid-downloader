@@ -1,0 +1,75 @@
+{{define "components/download_table.html"}}
+{{if .error}}
+<div class="error-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <p>{{.error}}</p>
+</div>
+{{else if not .downloads}}
+<div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    <p>No active downloads</p>
+    <span class="empty-hint">Click "Add New" to start downloading</span>
+</div>
+{{else}}
+<div class="download-list">
+    {{range .downloads}}
+    <div class="download-item" id="download-{{.ID}}" data-status="{{.Status}}">
+        <div class="download-header">
+            <div class="download-status-icon">
+                {{if eq .Status "complete"}}
+                <svg class="icon-complete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 13l4 4L19 7"/>
+                </svg>
+                {{else if eq .Status "error"}}
+                <svg class="icon-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                {{else if eq .Status "awaiting_selection"}}
+                <svg class="icon-waiting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                {{else}}
+                <div class="spinner"></div>
+                {{end}}
+            </div>
+            <div class="download-info">
+                <span class="download-name">{{.Name}}</span>
+                <span class="download-status-text">
+                    {{if eq .Status "pending"}}Processing magnet...
+                    {{else if eq .Status "awaiting_selection"}}Select files to download
+                    {{else if eq .Status "processing"}}Downloading on Real-Debrid ({{formatProgress .Progress}}%)
+                    {{else if eq .Status "downloading"}}Downloading to disk ({{formatProgress .Progress}}%)
+                    {{else if eq .Status "subtitles"}}{{if .SubtitleStatus}}{{.SubtitleStatus}}{{else}}Downloading subtitles...{{end}}
+                    {{else if eq .Status "complete"}}Complete{{if .SubtitleStatus}} · Subs: {{.SubtitleStatus}}{{end}}
+                    {{else if eq .Status "error"}}{{.ErrorMessage}}
+                    {{else}}{{.Status}}
+                    {{end}}
+                </span>
+            </div>
+            <div class="download-actions">
+                {{if eq .Status "awaiting_selection"}}
+                <button class="btn-select-files" onclick="openFileSelection({{.ID}})">
+                    SELECT FILES
+                </button>
+                {{end}}
+                <button class="btn-delete" onclick="deleteDownload({{.ID}})" title="Remove">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {{if or (eq .Status "processing") (eq .Status "downloading")}}
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{.Progress}}%"></div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</div>
+{{end}}
+{{end}}
