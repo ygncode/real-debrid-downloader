@@ -62,6 +62,64 @@ export REALDEBRID_API_KEY=YOUR_API_KEY
 | `--port` | Web server port | 8080 |
 | `--password` | Password to protect web interface | - |
 | `--subliminal-path` | Custom path to subliminal binary | auto-detect |
+| `--daemon`, `-d` | Run in background (daemon mode) | false |
+| `--stop` | Stop the running daemon | - |
+| `--status` | Check if daemon is running | - |
+
+## Running as a Background Service (Daemon Mode)
+
+RD Downloader supports running as a background daemon, which is useful for servers or persistent deployments.
+
+### Starting the Daemon
+
+```bash
+# Start in background
+./bin/rd-downloader --daemon --path=/path/to/movies --api-key=YOUR_API_KEY
+
+# Output:
+# rd-downloader started in background (PID: 12345)
+# Log file: ~/.rd-downloader/rd-downloader.log
+# Web interface: http://localhost:8080
+```
+
+### Checking Status
+
+```bash
+./bin/rd-downloader --status
+
+# If running:
+# rd-downloader is running (PID: 12345)
+# Log file: ~/.rd-downloader/rd-downloader.log
+
+# If not running:
+# rd-downloader is not running
+```
+
+### Stopping the Daemon
+
+```bash
+./bin/rd-downloader --stop
+
+# Output:
+# rd-downloader stopped successfully
+```
+
+### Viewing Logs
+
+```bash
+# View live logs
+tail -f ~/.rd-downloader/rd-downloader.log
+```
+
+### Daemon Files Location
+
+All daemon-related files are stored in `~/.rd-downloader/`:
+
+| File | Purpose |
+|------|---------|
+| `rd-downloader.db` | SQLite database |
+| `rd-downloader.pid` | Process ID file |
+| `rd-downloader.log` | Log output |
 
 ## How It Works
 
