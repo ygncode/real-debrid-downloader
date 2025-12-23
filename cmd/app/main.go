@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ygncode/real-debrid-downloader/internal/config"
+	"github.com/ygncode/real-debrid-downloader/internal/daemon"
 	"github.com/ygncode/real-debrid-downloader/internal/handlers"
 	"github.com/ygncode/real-debrid-downloader/internal/realdebrid"
 	"github.com/ygncode/real-debrid-downloader/internal/services"
@@ -21,6 +22,9 @@ var (
 	apiKey         string
 	subliminalPath string
 	password       string
+	daemonMode     bool
+	stopDaemon     bool
+	statusDaemon   bool
 )
 
 func main() {
@@ -38,7 +42,13 @@ and allows downloading new movies via Real-Debrid API with automatic subtitle fe
 	rootCmd.Flags().StringVar(&subliminalPath, "subliminal-path", "", "Path to subliminal binary (e.g., /home/user/miniconda3/bin/subliminal)")
 	rootCmd.Flags().StringVar(&password, "password", "", "Password to protect the web interface (optional)")
 
-	rootCmd.MarkFlagRequired("path")
+	// Daemon mode flags
+	rootCmd.Flags().BoolVarP(&daemonMode, "daemon", "d", false, "Run in background (daemon mode)")
+	rootCmd.Flags().BoolVar(&stopDaemon, "stop", false, "Stop the running daemon")
+	rootCmd.Flags().BoolVar(&statusDaemon, "status", false, "Check daemon status")
+
+	// Note: --path is validated in runServer, not marked required here
+	// because --stop and --status don't need it
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -47,6 +57,35 @@ and allows downloading new movies via Real-Debrid API with automatic subtitle fe
 }
 
 func runServer(cmd *cobra.Command, args []string) {
+	d := daemon.New()
+
+	// Handle --status flag
+	if statusDaemon {
+		pid, running, _ := d.Status()
+		if running {
+			fmt.Printf("rd-downloader is running (PID: %d)\n", pid)
+			fmt.Printf("Log file: %s\n", d.GetLogFile())
+		} else {
+			fmt.Println("rd-downloader is not running")
+		}
+		return
+	}
+
+	// Handle --stop flag
+	if stopDaemon {
+		if err := d.Stop(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("rd-downloader stopped successfully")
+		return
+	}
+
+	// For running the server (with or without --daemon), we need --path
+	if moviesPath == "" {
+		log.Fatal("--path flag is required")
+	}
+
 	// Validate movies path
 	info, err := os.Stat(moviesPath)
 	if err != nil {
@@ -62,6 +101,19 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 	if apiKey == "" {
 		log.Fatal("Real-Debrid API key is required. Set via --api-key flag or REALDEBRID_API_KEY environment variable")
+	}
+
+	// Handle --daemon flag (start in background)
+	if daemonMode {
+		if err := d.Start(os.Args[1:]); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		pid, _, _ := d.Status()
+		fmt.Printf("rd-downloader started in background (PID: %d)\n", pid)
+		fmt.Printf("Log file: %s\n", d.GetLogFile())
+		fmt.Printf("Web interface: http://localhost:%d\n", port)
+		return
 	}
 
 	// Initialize configuration
