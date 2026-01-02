@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -168,11 +169,24 @@ func (m *Manager) downloadFiles(download *models.Download) {
 			continue
 		}
 
-		downloadedPaths = append(downloadedPaths, destPath)
-
-		// Track video files for subtitle download
-		if isVideoFile(destPath) {
-			videoPaths = append(videoPaths, destPath)
+		// Extract if it's a .rar file
+		extractedFiles, err := m.extractRarIfNeeded(destPath)
+		if err != nil {
+			log.Printf("Failed to extract rar file: %v", err)
+			downloadedPaths = append(downloadedPaths, destPath)
+		} else if len(extractedFiles) > 0 {
+			// File was extracted, add extracted files and remove rar
+			downloadedPaths = append(downloadedPaths, extractedFiles...)
+			for _, extracted := range extractedFiles {
+				if isVideoFile(extracted) {
+					videoPaths = append(videoPaths, extracted)
+				}
+			}
+		} else {
+			downloadedPaths = append(downloadedPaths, destPath)
+			if isVideoFile(destPath) {
+				videoPaths = append(videoPaths, destPath)
+			}
 		}
 	}
 
@@ -245,13 +259,13 @@ func (m *Manager) downloadFile(ctx context.Context, download *models.Download, u
 
 	// Create progress writer
 	pw := &progressWriter{
-		writer:      out,
-		total:       totalSize,
-		download:    download,
-		manager:     m,
-		linkIndex:   linkIndex,
-		totalLinks:  totalLinks,
-		lastUpdate:  time.Now(),
+		writer:     out,
+		total:      totalSize,
+		download:   download,
+		manager:    m,
+		linkIndex:  linkIndex,
+		totalLinks: totalLinks,
+		lastUpdate: time.Now(),
 	}
 
 	// Copy with progress tracking
@@ -264,14 +278,14 @@ func (m *Manager) downloadFile(ctx context.Context, download *models.Download, u
 }
 
 type progressWriter struct {
-	writer      io.Writer
-	total       int64
-	written     int64
-	download    *models.Download
-	manager     *Manager
-	linkIndex   int
-	totalLinks  int
-	lastUpdate  time.Time
+	writer     io.Writer
+	total      int64
+	written    int64
+	download   *models.Download
+	manager    *Manager
+	linkIndex  int
+	totalLinks int
+	lastUpdate time.Time
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -315,4 +329,95 @@ func isVideoFile(path string) bool {
 		}
 	}
 	return false
+}
+
+func isRarFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".rar"
+}
+
+func (m *Manager) extractRarIfNeeded(destPath string) ([]string, error) {
+	if !isRarFile(destPath) {
+		return nil, nil
+	}
+
+	log.Printf("Detected rar file: %s, extracting...", filepath.Base(destPath))
+
+	// Create extraction directory (same directory as rar file)
+	extractDir := filepath.Dir(destPath)
+
+	// Try to find a suitable RAR extraction tool
+	var extractor string
+	var args []string
+
+	if _, err := exec.LookPath("unar"); err == nil {
+		extractor = "unar"
+		args = []string{"-o", extractDir + "/", destPath}
+	} else if _, err := exec.LookPath("unrar"); err == nil {
+		extractor = "unrar"
+		args = []string{"x", "-y", destPath, extractDir + "/"}
+	} else {
+		return nil, fmt.Errorf("no RAR extraction tool found (unar or unrar required)")
+	}
+
+	// Extract the rar file
+	cmd := exec.Command(extractor, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("%s failed: %w, output: %s", extractor, err, string(output))
+	}
+
+	log.Printf("Successfully extracted %s using %s", filepath.Base(destPath), extractor)
+
+	// Get list of extracted files
+	extractedFiles := []string{}
+	files, err := os.ReadDir(extractDir)
+	if err != nil {
+		log.Printf("Warning: could not list files in %s: %v", extractDir, err)
+	} else {
+		rarModTime, _ := os.Stat(destPath)
+		for _, file := range files {
+			// Skip the rar file itself
+			if file.Name() == filepath.Base(destPath) {
+				continue
+			}
+
+			filePath := filepath.Join(extractDir, file.Name())
+			fileInfo, _ := file.Info()
+
+			// Check if this is a directory created by extraction or a newly created file
+			if fileInfo != nil {
+				if fileInfo.IsDir() {
+					// List files in the extracted directory
+					subFiles, err := os.ReadDir(filePath)
+					if err != nil {
+						log.Printf("Warning: could not read directory %s: %v", filePath, err)
+					} else {
+						for _, subFile := range subFiles {
+							subFilePath := filepath.Join(filePath, subFile.Name())
+							extractedFiles = append(extractedFiles, subFilePath)
+							log.Printf("Extracted: %s/%s", file.Name(), subFile.Name())
+						}
+					}
+				} else if fileInfo.ModTime().After(rarModTime.ModTime()) {
+					// Newly created file at root level
+					extractedFiles = append(extractedFiles, filePath)
+					log.Printf("Extracted: %s", file.Name())
+				}
+			}
+		}
+	}
+
+	// Remove the rar file
+	if err := os.Remove(destPath); err != nil {
+		log.Printf("Warning: could not remove rar file %s: %v", destPath, err)
+	} else {
+		log.Printf("Removed rar file: %s", filepath.Base(destPath))
+	}
+
+	if len(extractedFiles) == 0 {
+		return nil, fmt.Errorf("no extracted files found")
+	}
+
+	return extractedFiles, nil
 }

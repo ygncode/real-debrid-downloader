@@ -9,6 +9,7 @@ A web application that lists movies from a directory and allows downloading new 
 - Select which files to download from torrents
 - Real-time download progress tracking via SSE
 - Automatic subtitle download using Subliminal CLI
+- Automatic extraction of .rar archives
 - Clean, cinematic dark theme UI
 - Password protection (optional)
 - Delete files from collection
@@ -19,6 +20,7 @@ A web application that lists movies from a directory and allows downloading new 
 
 - Go 1.21 or later
 - Real-Debrid account and API key
+- unrar for extracting .rar archives (macOS: `brew install unrar`, Linux: `sudo apt install unrar`)
 - (Optional) Subliminal for subtitles: `pip install subliminal`
 
 ### Build from source
@@ -126,7 +128,8 @@ All daemon-related files are stored in `~/.rd-downloader/`:
 1. **Add Torrent**: Paste a magnet link or upload a .torrent file
 2. **Select Files**: Choose which files from the torrent to download
 3. **Download**: Real-Debrid processes the torrent, then files are downloaded to your movies folder
-4. **Subtitles**: English subtitles are automatically downloaded for video files (optional)
+4. **Extract**: If downloaded files are .rar archives, they are automatically extracted and the archive is removed
+5. **Subtitles**: English subtitles are automatically downloaded for video files (optional)
 
 ## Tech Stack
 
