@@ -20,7 +20,12 @@ func (d *Daemon) Start(args []string) error {
 	d.cleanStalePID()
 
 	// Filter out --daemon flag from args for the child process
-	childArgs := filterDaemonArgs(args)
+	var childArgs []string
+	for _, arg := range args {
+		if arg != "--daemon" && arg != "-d" {
+			childArgs = append(childArgs, arg)
+		}
+	}
 
 	// Get the executable path
 	executable, err := os.Executable()
